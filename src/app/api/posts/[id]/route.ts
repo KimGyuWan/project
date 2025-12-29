@@ -46,8 +46,8 @@ export async function GET(
   }
 }
 
-// 게시글 수정 (PUT)
-export async function PUT(
+// 게시글 수정 (PATCH)
+export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -123,7 +123,7 @@ export async function PUT(
     }
 
     const response = await fetch(`${EXTERNAL_API_BASE_URL}/posts/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers,
       body: JSON.stringify({ title, body: bodyText, category, tags: processedTags }),
     });

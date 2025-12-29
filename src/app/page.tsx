@@ -16,9 +16,12 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
   // 필터 상태
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // 입력값 (실시간 업데이트)
+  const [search, setSearch] = useState(''); // 실제 검색어 (검색 버튼 클릭 시 업데이트)
   const [category, setCategory] = useState<Category | ''>('');
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -28,40 +31,37 @@ export default function Home() {
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   
   const observerTarget = useRef<HTMLDivElement>(null);
+  const tableScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const prevFiltersRef = useRef<string>('');
-  const prevTokenRef = useRef<string | null>(null);
-  const isMountedRef = useRef(true);
-
-  // 컴포넌트 언마운트 시 cleanup
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
-    };
-  }, []);
 
   const handleLogout = () => {
     logout();
     router.push('/login');
   };
 
-  const fetchPosts = useCallback(async (pageNum: number, reset: boolean = false) => {
+  const fetchPosts = useCallback(async (cursor: string | null = null, reset: boolean = false) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
-        page: pageNum.toString(),
         limit: '10',
       });
       
+      // cursor 기반 페이지네이션
+      if (cursor) {
+        params.append('cursor', cursor);
+      }
+      
       if (search) params.append('search', search);
       if (category) params.append('category', category);
-      if (sortField) params.append('sortField', sortField);
-      if (sortOrder) params.append('sortOrder', sortOrder);
+      if (sortField) {
+        params.append('sortBy', sortField);
+        params.append('sortField', sortField);
+      }
+      if (sortOrder) {
+        params.append('order', sortOrder);
+        params.append('sortOrder', sortOrder);
+        params.append('direction', sortOrder);
+      }
 
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
@@ -76,14 +76,25 @@ export default function Home() {
       });
       const data = await response.json();
 
+      const postsData = data.items || data.posts || data.data || [];
+      
       if (reset) {
-        setPosts(data.posts || []);
+        setPosts(Array.isArray(postsData) ? postsData : []);
       } else {
-        setPosts(prev => [...prev, ...(data.posts || [])]);
+        setPosts(prev => [...prev, ...(Array.isArray(postsData) ? postsData : [])]);
       }
       
-      setHasMore(data.hasMore || false);
-      setTotal(data.total || 0);
+      // cursor 기반 페이지네이션
+      const hasNextCursor = data.nextCursor !== null && data.nextCursor !== undefined;
+      setHasMore(hasNextCursor);
+      setNextCursor(data.nextCursor || null);
+      setTotal(reset ? postsData.length : (prev => prev + postsData.length));
+      if (reset) {
+        setHasLoadedOnce(true);
+      }
+      if (reset) {
+        setHasLoadedOnce(true);
+      }
     } catch (error) {
       console.error('Failed to fetch posts:', error);
     } finally {
@@ -91,31 +102,10 @@ export default function Home() {
     }
   }, [search, category, sortField, sortOrder, token]);
 
-  // 필터 변경 감지 (token 제외)
-  const filterKey = `${search}-${category}-${sortField}-${sortOrder}`;
-  
   // 초기 로드 및 필터 변경 시
   useEffect(() => {
     // AuthContext가 로딩 중이면 요청하지 않음
     if (authLoading) return;
-    
-    // token이 null에서 실제 값으로 변경된 경우 (로그인 후)
-    const tokenChanged = prevTokenRef.current === null && token !== null;
-    if (tokenChanged) {
-      prevTokenRef.current = token;
-      // 필터 체크를 무시하고 바로 실행
-    } else {
-      // 필터가 실제로 변경되었는지 확인 (초기 로드는 제외)
-      if (prevFiltersRef.current === filterKey && prevFiltersRef.current !== '') {
-        return;
-      }
-      prevFiltersRef.current = filterKey;
-    }
-    
-    // token 변경 추적
-    if (prevTokenRef.current !== token) {
-      prevTokenRef.current = token;
-    }
     
     // 이전 요청 취소
     if (abortControllerRef.current) {
@@ -124,14 +114,14 @@ export default function Home() {
     
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
-    isMountedRef.current = true;
     
     setPage(1);
     setPosts([]);
+    setNextCursor(null);
     
     const fetchData = async () => {
-      // 컴포넌트가 언마운트되었거나 요청이 취소되었는지 확인
-      if (!isMountedRef.current || abortController.signal.aborted) {
+      // 요청이 취소되었는지 확인
+      if (abortController.signal.aborted) {
         return;
       }
       
@@ -144,17 +134,22 @@ export default function Home() {
         
         if (search) params.append('search', search);
         if (category) params.append('category', category);
-        if (sortField) params.append('sortField', sortField);
-        if (sortOrder) params.append('sortOrder', sortOrder);
+        if (sortField) {
+          params.append('sortBy', sortField);
+          params.append('sortField', sortField);
+        }
+        if (sortOrder) {
+          params.append('order', sortOrder);
+          params.append('sortOrder', sortOrder);
+          params.append('direction', sortOrder);
+        }
 
         const headers: HeadersInit = {
           'Content-Type': 'application/json',
         };
 
-        // 최신 token 사용 (의존성 배열에 포함하지 않음)
-        const currentToken = token;
-        if (currentToken) {
-          headers['Authorization'] = `Bearer ${currentToken}`;
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
         }
 
         const response = await fetch(`/api/posts?${params}`, {
@@ -163,27 +158,32 @@ export default function Home() {
         });
         
         // 요청이 취소되었는지 다시 확인
-        if (abortController.signal.aborted || !isMountedRef.current) {
+        if (abortController.signal.aborted) {
           return;
         }
         
         const data = await response.json();
 
-        // 컴포넌트가 여전히 마운트되어 있는지 확인
-        if (!isMountedRef.current || abortController.signal.aborted) {
+        // 요청이 취소되었는지 다시 확인
+        if (abortController.signal.aborted) {
           return;
         }
 
-        setPosts(data.posts || []);
-        setHasMore(data.hasMore || false);
-        setTotal(data.total || 0);
+        const postsData = data.items || data.posts || data.data || [];
+        
+        setPosts(Array.isArray(postsData) ? postsData : []);
+        const hasNextCursor = data.nextCursor !== null && data.nextCursor !== undefined;
+        setHasMore(hasNextCursor);
+        setNextCursor(data.nextCursor || null);
+        setTotal(postsData.length);
+        setHasLoadedOnce(true);
       } catch (error: any) {
-        if (error.name === 'AbortError' || !isMountedRef.current) {
+        if (error.name === 'AbortError') {
           return;
         }
         console.error('Failed to fetch posts:', error);
       } finally {
-        if (isMountedRef.current && !abortController.signal.aborted) {
+        if (!abortController.signal.aborted) {
           setLoading(false);
         }
       }
@@ -192,28 +192,29 @@ export default function Home() {
     fetchData();
     
     return () => {
-      isMountedRef.current = false;
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterKey, authLoading]);
+  }, [search, category, sortField, sortOrder, token, authLoading]);
 
-  // 무한 스크롤
+  // 무한 스크롤 (테이블 내부 스크롤 감지)
   useEffect(() => {
-    if (!hasMore || loading) return;
+    if (!hasMore || loading || !tableScrollContainerRef.current) return;
 
+    const scrollContainer = tableScrollContainerRef.current;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
-          const nextPage = page + 1;
-          setPage(nextPage);
-          fetchPosts(nextPage, false);
+        if (entries[0].isIntersecting && hasMore && !loading && nextCursor) {
+          fetchPosts(nextCursor, false);
         }
       },
-      { threshold: 0.1 }
+      { 
+        threshold: 0.1,
+        root: scrollContainer,
+        rootMargin: '0px'
+      }
     );
 
     const currentTarget = observerTarget.current;
@@ -226,7 +227,7 @@ export default function Home() {
         observer.unobserve(currentTarget);
       }
     };
-  }, [hasMore, loading, page, fetchPosts]);
+  }, [hasMore, loading, nextCursor, fetchPosts]);
 
   const handleCreate = async (title: string, body: string, category: Category, tags: string[]) => {
     try {
@@ -251,7 +252,8 @@ export default function Home() {
 
       setShowForm(false);
       setPage(1);
-      fetchPosts(1, true);
+      setNextCursor(null);
+      fetchPosts(null, true);
     } catch (error: any) {
       throw error;
     }
@@ -270,7 +272,7 @@ export default function Home() {
       }
 
       const response = await fetch(`/api/posts/${editingPost.id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers,
         body: JSON.stringify({ title, body, category, tags }),
       });
@@ -283,7 +285,8 @@ export default function Home() {
       setEditingPost(null);
       setShowForm(false);
       setPage(1);
-      fetchPosts(1, true);
+      setNextCursor(null);
+      fetchPosts(null, true);
     } catch (error: any) {
       throw error;
     }
@@ -311,7 +314,8 @@ export default function Home() {
       }
 
       setPage(1);
-      fetchPosts(1, true);
+      setNextCursor(null);
+      fetchPosts(null, true);
     } catch (error) {
       alert('게시글 삭제에 실패했습니다.');
     }
@@ -329,8 +333,10 @@ export default function Home() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    // 검색 버튼을 눌렀을 때만 실제 검색어 업데이트
+    setSearch(searchInput);
     setPage(1);
-    fetchPosts(1, true);
+    setNextCursor(null);
   };
 
   return (
@@ -360,9 +366,15 @@ export default function Home() {
             <SearchForm onSubmit={handleSearch}>
               <SearchInput
                 type="text"
-                value={search}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchInput(e.target.value)}
                 placeholder="제목 또는 본문 검색..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearch(e);
+                  }
+                }}
               />
               <SearchButton type="submit">
                 검색
@@ -406,14 +418,13 @@ export default function Home() {
             posts={posts}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            observerTarget={observerTarget}
+            loading={loading || authLoading || !hasLoadedOnce}
+            hasMore={hasMore}
+            onScrollContainerReady={(container) => {
+              tableScrollContainerRef.current = container;
+            }}
           />
-
-          <ObserverTarget ref={observerTarget}>
-            {loading && <Loading>로딩 중...</Loading>}
-            {!hasMore && posts && posts.length > 0 && (
-              <EndMessage>모든 게시글을 불러왔습니다.</EndMessage>
-            )}
-          </ObserverTarget>
         </>
       ) : (
         <PostForm
@@ -577,12 +588,6 @@ const CreateButton = styled.button`
   &:hover {
     background: #218838;
   }
-`;
-
-const ObserverTarget = styled.div`
-  margin-top: 20px;
-  padding: 20px;
-  text-align: center;
 `;
 
 const Loading = styled.div`

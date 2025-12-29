@@ -13,9 +13,26 @@ export async function GET(request: NextRequest) {
 
     // 쿼리 파라미터를 외부 API로 전달
     const params = new URLSearchParams();
+    
+    // 모든 파라미터를 먼저 복사
     searchParams.forEach((value, key) => {
       params.append(key, value);
     });
+    
+    // 정렬 파라미터 변환 (외부 API가 sortBy와 order를 사용한다고 가정)
+    const sortField = searchParams.get('sortField') || searchParams.get('sortBy');
+    const sortOrder = searchParams.get('sortOrder') || searchParams.get('order') || searchParams.get('direction');
+    
+    // sortBy와 order 파라미터 추가 (외부 API가 이 이름을 사용할 수 있음)
+    if (sortField) {
+      params.set('sortBy', sortField);
+    }
+    if (sortOrder) {
+      params.set('order', sortOrder);
+    }
+    
+    // 디버깅: 전달되는 파라미터 확인
+    console.log('API Request params:', params.toString());
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -84,7 +101,7 @@ export async function POST(request: NextRequest) {
     let processedTags: string[] = [];
     if (tags && Array.isArray(tags)) {
       // 중복 제거
-      processedTags = [...new Set(tags)];
+      processedTags = Array.from(new Set(tags));
       
       // 최대 5개 제한
       if (processedTags.length > 5) {

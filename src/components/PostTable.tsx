@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { Post } from '@/types/post';
 
@@ -8,6 +9,10 @@ interface PostTableProps {
   posts: Post[];
   onEdit: (post: Post) => void;
   onDelete: (id: string) => void;
+  observerTarget?: React.RefObject<HTMLDivElement>;
+  loading?: boolean;
+  hasMore?: boolean;
+  onScrollContainerReady?: (container: HTMLDivElement | null) => void;
 }
 
 interface ColumnConfig {
@@ -24,9 +29,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   FREE: '자유',
 };
 
-export default function PostTable({ posts, onEdit, onDelete }: PostTableProps) {
+export default function PostTable({ posts, onEdit, onDelete, observerTarget, loading, hasMore, onScrollContainerReady }: PostTableProps) {
+  const router = useRouter();
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (onScrollContainerReady) {
+      onScrollContainerReady(tableWrapperRef.current);
+    }
+  }, [onScrollContainerReady]);
+  
   const [columns, setColumns] = useState<ColumnConfig[]>([
-    { key: 'id', label: 'ID', width: 80, visible: true, resizable: true },
     { key: 'title', label: '제목', width: 300, visible: true, resizable: true },
     { key: 'body', label: '본문', width: 400, visible: true, resizable: true },
     { key: 'category', label: '카테고리', width: 120, visible: true, resizable: true },
@@ -116,7 +129,7 @@ export default function PostTable({ posts, onEdit, onDelete }: PostTableProps) {
         ))}
       </ColumnControls>
       
-      <TableWrapper>
+      <TableWrapper ref={tableWrapperRef}>
         <Table ref={tableRef}>
           <thead>
             <tr>
@@ -143,15 +156,24 @@ export default function PostTable({ posts, onEdit, onDelete }: PostTableProps) {
             </tr>
           </thead>
           <tbody>
-            {posts && posts.length === 0 ? (
+            {loading ? (
+              <tr>
+                <EmptyCell colSpan={visibleColumns.length + 1}>
+                  로딩 중...
+                </EmptyCell>
+              </tr>
+            ) : !posts || posts.length === 0 ? (
               <tr>
                 <EmptyCell colSpan={visibleColumns.length + 1}>
                   게시글이 없습니다.
                 </EmptyCell>
               </tr>
             ) : (
-              posts && posts.map((post) => (
-                <tr key={post.id}>
+              posts.map((post) => (
+                <TableRow 
+                  key={post.id}
+                  onClick={() => router.push(`/posts/${post.id}`)}
+                >
                   {visibleColumns.map((col) => (
                     <Td key={col.key}>
                       {col.key === 'createdAt'
@@ -169,7 +191,7 @@ export default function PostTable({ posts, onEdit, onDelete }: PostTableProps) {
                         : post[col.key]}
                     </Td>
                   ))}
-                  <Td>
+                  <Td onClick={(e) => e.stopPropagation()}>
                     <ActionButtons>
                       <EditButton onClick={() => onEdit(post)}>
                         수정
@@ -179,7 +201,7 @@ export default function PostTable({ posts, onEdit, onDelete }: PostTableProps) {
                       </DeleteButton>
                     </ActionButtons>
                   </Td>
-                </tr>
+                </TableRow>
               ))
             )}
           </tbody>
@@ -223,8 +245,11 @@ const CheckboxLabel = styled.label`
 
 const TableWrapper = styled.div`
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 600px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
+  position: relative;
 `;
 
 const Table = styled.table`
@@ -240,11 +265,16 @@ const Th = styled.th<{ width?: number }>`
   text-align: left;
   font-weight: 600;
   border-bottom: 2px solid #dee2e6;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 20;
   user-select: none;
   width: ${props => props.width ? `${props.width}px` : 'auto'};
   min-width: 50px;
   max-width: none;
+  
+  /* 스크롤 시 그림자 효과 */
+  box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
 `;
 
 const ThContent = styled.div`
@@ -281,6 +311,19 @@ const ResizeHandle = styled.div`
 
   &:active::after {
     background: #0056b3;
+  }
+`;
+
+const TableRow = styled.tr`
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #f8f9fa;
+  }
+
+  &:active {
+    background-color: #e9ecef;
   }
 `;
 
@@ -329,4 +372,24 @@ const DeleteButton = styled.button`
   &:hover {
     background: #c82333;
   }
+`;
+
+const ObserverTarget = styled.div`
+  padding: 20px;
+  text-align: center;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Loading = styled.div`
+  color: #666;
+  font-size: 14px;
+`;
+
+const EndMessage = styled.div`
+  color: #999;
+  font-size: 14px;
+  padding: 20px;
 `;

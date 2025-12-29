@@ -48,10 +48,6 @@ export default function NewPostPage() {
 
   return (
     <Container>
-      {/* <Header>
-        <Title>게시글 작성</Title>
-      </Header> */}
-      {error && <ErrorMessage>{error}</ErrorMessage>}
       <PostForm
         post={null}
         onSubmit={handleCreate}
@@ -65,25 +61,5 @@ const Container = styled.div`
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-`;
-
-const Header = styled.div`
-  margin-bottom: 30px;
-`;
-
-const Title = styled.h1`
-  font-size: 28px;
-  font-weight: 600;
-  margin: 0;
-  color: #333;
-`;
-
-const ErrorMessage = styled.div`
-  background: #fee;
-  color: #c33;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border: 1px solid #fcc;
 `;
 

@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-      } catch (error) {
+      } catch {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
       }
@@ -61,16 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // 사용자 정보 저장
       if (data.user) {
-        // Ensure that user object contains all required fields (id, email, name)
-        // If 'name' is missing, set it as an empty string or fallback
         const userWithName = {
           ...data.user,
-          name: (data.user as any).name ?? '',
+          name: (data.user as AuthUser).name ?? '',
         };
         setUser(userWithName);
         localStorage.setItem('auth_user', JSON.stringify(userWithName));
       }
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   };

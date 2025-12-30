@@ -99,8 +99,9 @@ export default function PostForm({ post, onSubmit, onCancel }: PostFormProps) {
         setCategory('NOTICE');
         setTags([]);
       }
-    } catch (err: any) {
-      setError(err.message || '오류가 발생했습니다.');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('오류가 발생했습니다.');
+      setError(error.message);
     } finally {
       setIsSubmitting(false);
     }

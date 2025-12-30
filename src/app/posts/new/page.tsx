@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import PostForm from '@/components/PostForm';
@@ -10,11 +9,9 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function NewPostPage() {
   const router = useRouter();
   const { token } = useAuth();
-  const [error, setError] = useState('');
 
   const handleCreate = async (title: string, body: string, category: Category, tags: string[]) => {
     try {
-      setError('');
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
@@ -36,9 +33,9 @@ export default function NewPostPage() {
 
       // 작성 성공 시 게시판 목록으로 이동
       router.push('/');
-    } catch (err: any) {
-      setError(err.message || '게시글 작성에 실패했습니다.');
-      throw err;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('게시글 작성에 실패했습니다.');
+      throw error;
     }
   };
 

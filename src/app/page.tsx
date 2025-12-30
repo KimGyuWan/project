@@ -13,10 +13,7 @@ export default function Home() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
   // 필터 상태
@@ -30,7 +27,6 @@ export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   
-  const observerTarget = useRef<HTMLDivElement>(null);
   const tableScrollContainerRef = useRef<HTMLDivElement | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -85,9 +81,6 @@ export default function Home() {
       }
       
       // cursor 기반 페이지네이션
-      const hasNextCursor = data.nextCursor !== null && data.nextCursor !== undefined;
-      setHasMore(hasNextCursor);
-      setNextCursor(data.nextCursor || null);
       setTotal(reset ? postsData.length : (prev => prev + postsData.length));
       if (reset) {
         setHasLoadedOnce(true);
@@ -115,9 +108,7 @@ export default function Home() {
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
     
-    setPage(1);
     setPosts([]);
-    setNextCursor(null);
     
     const fetchData = async () => {
       // 요청이 취소되었는지 확인
@@ -172,13 +163,10 @@ export default function Home() {
         const postsData = data.items || data.posts || data.data || [];
         
         setPosts(Array.isArray(postsData) ? postsData : []);
-        const hasNextCursor = data.nextCursor !== null && data.nextCursor !== undefined;
-        setHasMore(hasNextCursor);
-        setNextCursor(data.nextCursor || null);
         setTotal(postsData.length);
         setHasLoadedOnce(true);
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
           return;
         }
         console.error('Failed to fetch posts:', error);
@@ -198,36 +186,6 @@ export default function Home() {
       }
     };
   }, [search, category, sortField, sortOrder, token, authLoading]);
-
-  // 무한 스크롤 (테이블 내부 스크롤 감지)
-  useEffect(() => {
-    if (!hasMore || loading || !tableScrollContainerRef.current) return;
-
-    const scrollContainer = tableScrollContainerRef.current;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && nextCursor) {
-          fetchPosts(nextCursor, false);
-        }
-      },
-      { 
-        threshold: 0.1,
-        root: scrollContainer,
-        rootMargin: '0px'
-      }
-    );
-
-    const currentTarget = observerTarget.current;
-    if (currentTarget) {
-      observer.observe(currentTarget);
-    }
-
-    return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget);
-      }
-    };
-  }, [hasMore, loading, nextCursor, fetchPosts]);
 
   const handleCreate = async (title: string, body: string, category: Category, tags: string[]) => {
     try {
@@ -251,10 +209,8 @@ export default function Home() {
       }
 
       setShowForm(false);
-      setPage(1);
-      setNextCursor(null);
       fetchPosts(null, true);
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   };
@@ -284,10 +240,8 @@ export default function Home() {
 
       setEditingPost(null);
       setShowForm(false);
-      setPage(1);
-      setNextCursor(null);
       fetchPosts(null, true);
-    } catch (error: any) {
+    } catch (error) {
       throw error;
     }
   };
@@ -313,10 +267,8 @@ export default function Home() {
         throw new Error('게시글 삭제에 실패했습니다.');
       }
 
-      setPage(1);
-      setNextCursor(null);
       fetchPosts(null, true);
-    } catch (error) {
+    } catch {
       alert('게시글 삭제에 실패했습니다.');
     }
   };
@@ -335,8 +287,6 @@ export default function Home() {
     e.preventDefault();
     // 검색 버튼을 눌렀을 때만 실제 검색어 업데이트
     setSearch(searchInput);
-    setPage(1);
-    setNextCursor(null);
   };
 
   return (
@@ -418,9 +368,7 @@ export default function Home() {
             posts={posts}
             onEdit={handleEdit}
             onDelete={handleDelete}
-            observerTarget={observerTarget}
             loading={loading || authLoading || !hasLoadedOnce}
-            hasMore={hasMore}
             onScrollContainerReady={(container) => {
               tableScrollContainerRef.current = container;
             }}
@@ -588,15 +536,4 @@ const CreateButton = styled.button`
   &:hover {
     background: #218838;
   }
-`;
-
-const Loading = styled.div`
-  color: #666;
-  font-size: 14px;
-`;
-
-const EndMessage = styled.div`
-  color: #999;
-  font-size: 14px;
-  padding: 20px;
 `;

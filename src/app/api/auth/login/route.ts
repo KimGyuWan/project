@@ -35,9 +35,10 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     return NextResponse.json(data, { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to login', details: error.message },
+      { error: 'Failed to login', details: errorMessage },
       { status: 500 }
     );
   }

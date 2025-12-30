@@ -9,9 +9,7 @@ interface PostTableProps {
   posts: Post[];
   onEdit: (post: Post) => void;
   onDelete: (id: string) => void;
-  observerTarget?: React.RefObject<HTMLDivElement>;
   loading?: boolean;
-  hasMore?: boolean;
   onScrollContainerReady?: (container: HTMLDivElement | null) => void;
 }
 
@@ -29,7 +27,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   FREE: '자유',
 };
 
-export default function PostTable({ posts, onEdit, onDelete, observerTarget, loading, hasMore, onScrollContainerReady }: PostTableProps) {
+export default function PostTable({ posts, onEdit, onDelete, loading, onScrollContainerReady }: PostTableProps) {
   const router = useRouter();
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   
@@ -133,7 +131,7 @@ export default function PostTable({ posts, onEdit, onDelete, observerTarget, loa
         <Table ref={tableRef}>
           <thead>
             <tr>
-              {visibleColumns.map((col, index) => {
+              {visibleColumns.map((col) => {
                 const colIndex = columns.findIndex(c => c.key === col.key);
                 return (
                   <Th
@@ -372,24 +370,4 @@ const DeleteButton = styled.button`
   &:hover {
     background: #c82333;
   }
-`;
-
-const ObserverTarget = styled.div`
-  padding: 20px;
-  text-align: center;
-  min-height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const Loading = styled.div`
-  color: #666;
-  font-size: 14px;
-`;
-
-const EndMessage = styled.div`
-  color: #999;
-  font-size: 14px;
-  padding: 20px;
 `;

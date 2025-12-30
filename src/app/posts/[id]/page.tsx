@@ -59,8 +59,9 @@ export default function PostDetailPage() {
         }
 
         setPost(postData);
-      } catch (err: any) {
-        setError(err.message || '게시글을 불러오는데 실패했습니다.');
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('게시글을 불러오는데 실패했습니다.');
+        setError(error.message);
       } finally {
         setLoading(false);
       }
@@ -181,6 +182,7 @@ const Title = styled.h1`
   margin: 0 0 20px 0;
   color: #333;
   line-height: 1.4;
+  word-break: break-word;
 `;
 
 const MetaInfo = styled.div`

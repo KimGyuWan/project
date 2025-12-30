@@ -21,8 +21,9 @@ export default function LoginPage() {
     try {
       await login({ email, password });
       router.push('/');
-    } catch (err: any) {
-      setError(err.message || '로그인에 실패했습니다.');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('로그인에 실패했습니다.');
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }

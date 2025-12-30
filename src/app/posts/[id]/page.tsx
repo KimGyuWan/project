@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import styled from 'styled-components';
 import { Post } from '@/types/post';
@@ -70,9 +70,9 @@ export default function PostDetailPage() {
     if (params.id) {
       fetchPost();
     }
-  }, [params.id, token, authLoading, router]);
+  }, [params.id, token, authLoading]);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('ko-KR', {
       year: 'numeric',
@@ -81,7 +81,7 @@ export default function PostDetailPage() {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, []);
 
   if (loading || authLoading) {
     return (
@@ -95,7 +95,7 @@ export default function PostDetailPage() {
     return (
       <Container>
         <ErrorMessage>{error || '게시글을 찾을 수 없습니다.'}</ErrorMessage>
-        <BackButton onClick={() => router.push('/')}>목록으로</BackButton>
+        <BackButton onClick={() => router.push('/posts')}>목록으로</BackButton>
       </Container>
     );
   }
@@ -103,7 +103,7 @@ export default function PostDetailPage() {
   return (
     <Container>
       <Header>
-        <BackButton onClick={() => router.push('/')}>← 목록으로</BackButton>
+        <BackButton onClick={() => router.push('/posts')}>← 목록으로</BackButton>
         <Title>{post.title}</Title>
         <MetaInfo>
           <MetaItem>

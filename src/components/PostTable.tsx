@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { Post } from '@/types/post';
@@ -28,14 +28,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 export default function PostTable({ posts, onEdit, onDelete, loading, onScrollContainerReady }: PostTableProps) {
+
   const router = useRouter();
   const tableWrapperRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    if (onScrollContainerReady) {
-      onScrollContainerReady(tableWrapperRef.current);
-    }
-  }, [onScrollContainerReady]);
   
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { key: 'title', label: '제목', width: 300, visible: true, resizable: true },
@@ -48,7 +43,6 @@ export default function PostTable({ posts, onEdit, onDelete, loading, onScrollCo
   const [resizingColumn, setResizingColumn] = useState<number | null>(null);
   const [resizeStartX, setResizeStartX] = useState(0);
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
-  const tableRef = useRef<HTMLTableElement>(null);
 
   const handleMouseDown = (index: number, e: React.MouseEvent) => {
     if (!columns[index].resizable) return;
@@ -98,7 +92,7 @@ export default function PostTable({ posts, onEdit, onDelete, loading, onScrollCo
     });
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString('ko-KR', {
       year: 'numeric',
@@ -107,9 +101,28 @@ export default function PostTable({ posts, onEdit, onDelete, loading, onScrollCo
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
+  }, []);
 
-  const visibleColumns = columns.filter(col => col.visible);
+  const visibleColumns = useMemo(() => columns.filter(col => col.visible), [columns]);
+
+  // colIndex를 빠르게 찾기 위한 Map 생성
+  const columnIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    columns.forEach((col, index) => {
+      map.set(col.key, index);
+    });
+    return map;
+  }, [columns]);
+
+  const handleScrollContainerReady = useCallback((container: HTMLDivElement | null) => {
+    if (onScrollContainerReady) {
+      onScrollContainerReady(container);
+    }
+  }, [onScrollContainerReady]);
+
+  useEffect(() => {
+    handleScrollContainerReady(tableWrapperRef.current);
+  }, [handleScrollContainerReady]);
 
   return (
     <TableContainer $isResizing={resizingColumn !== null}>
@@ -128,11 +141,11 @@ export default function PostTable({ posts, onEdit, onDelete, loading, onScrollCo
       </ColumnControls>
       
       <TableWrapper ref={tableWrapperRef}>
-        <Table ref={tableRef}>
+        <Table>
           <thead>
             <tr>
               {visibleColumns.map((col) => {
-                const colIndex = columns.findIndex(c => c.key === col.key);
+                const colIndex = columnIndexMap.get(col.key) ?? -1;
                 return (
                   <Th
                     key={col.key}
@@ -244,7 +257,7 @@ const CheckboxLabel = styled.label`
 const TableWrapper = styled.div`
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 600px;
+  max-height: 700px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   position: relative;
@@ -289,7 +302,7 @@ const ResizeHandle = styled.div`
   position: absolute;
   right: 0;
   top: 0;
-  z-index: 10;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: center;

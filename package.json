@@ -12,7 +12,8 @@
     "react": "^18",
     "react-dom": "^18",
     "next": "14.2.35",
-    "styled-components": "^6.1.8"
+    "styled-components": "^6.1.8",
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
     "typescript": "^5",

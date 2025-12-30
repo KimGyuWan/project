@@ -32,7 +32,7 @@ export default function NewPostPage() {
       }
 
       // 작성 성공 시 게시판 목록으로 이동
-      router.push('/');
+      router.push('/posts');
     } catch (err) {
       const error = err instanceof Error ? err : new Error('게시글 작성에 실패했습니다.');
       throw error;
@@ -40,7 +40,7 @@ export default function NewPostPage() {
   };
 
   const handleCancel = () => {
-    router.push('/');
+    router.push('/posts');
   };
 
   return (

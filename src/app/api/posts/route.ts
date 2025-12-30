@@ -30,9 +30,6 @@ export async function GET(request: NextRequest) {
     if (sortOrder) {
       params.set('order', sortOrder);
     }
-    
-    // 디버깅: 전달되는 파라미터 확인
-    console.log('API Request params:', params.toString());
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',

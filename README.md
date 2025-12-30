@@ -150,13 +150,6 @@ Next.js를 정적 사이트로 export하여 GitHub Pages에 배포:
 npm run build
 ```
 
-또는 **Vercel**과 GitHub 연동 (권장):
-- Vercel에 GitHub 저장소 연결 시 자동 배포
-- [Vercel](https://vercel.com)에서 GitHub 저장소 import
-
-### 배포 링크
-(배포 후 링크를 여기에 추가하세요)
-
 ---
 
 ## 📚 Learn More

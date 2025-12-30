@@ -340,9 +340,9 @@ export default function PostsPage() {
 }
 
 const Container = styled.div`
-  max-width: 1400px;
+  width: 100%;
+  padding: 40px;
   margin: 0 auto;
-  padding: 20px;
 `;
 
 const HomeButton = styled.button`

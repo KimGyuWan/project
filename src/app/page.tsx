@@ -56,11 +56,11 @@ export default function Home() {
 const Container = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 40px 20px;
+  padding: 40px;
 `;
 
 const Header = styled.header`
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto 60px;
   display: flex;
   justify-content: space-between;
@@ -124,7 +124,7 @@ const LogoutButton = styled.button`
 `;
 
 const Content = styled.div`
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
 `;
 

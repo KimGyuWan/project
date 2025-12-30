@@ -9,9 +9,11 @@ import StackedBarChart from '@/components/charts/StackedBarChart';
 import StackedAreaChart from '@/components/charts/StackedAreaChart';
 import MultiLineChart from '@/components/charts/MultiLineChart';
 import { CoffeeBrandData, SnackBrandData, MoodTrendData, WorkoutTrendData, CoffeeConsumptionData, SnackImpactData } from '@/types/chart';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ChartsPage() {
   const router = useRouter();
+  const { isAuthenticated, user, logout } = useAuth();
   const [coffeeBrands, setCoffeeBrands] = useState<CoffeeBrandData[]>([]);
   const [snackBrands, setSnackBrands] = useState<SnackBrandData[]>([]);
   const [moodTrend, setMoodTrend] = useState<MoodTrendData[]>([]);
@@ -99,13 +101,30 @@ export default function ChartsPage() {
     fetchAllData();
   }, []);
 
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
   if (loading) {
     return (
       <Container>
         <HomeButton onClick={() => router.push('/')}>
           이전 페이지
         </HomeButton>
-        <Title>데이터 시각화</Title>
+        <Header>
+          <Title>데이터 시각화</Title>
+          <AuthSection>
+            {isAuthenticated ? (
+              <>
+                <UserInfo>{user?.email}</UserInfo>
+                <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
+              </>
+            ) : (
+              <LoginButton onClick={() => router.push('/login')}>로그인</LoginButton>
+            )}
+          </AuthSection>
+        </Header>
         <LoadingText>로딩 중...</LoadingText>
       </Container>
     );
@@ -117,7 +136,19 @@ export default function ChartsPage() {
         <HomeButton onClick={() => router.push('/')}>
           이전 페이지
         </HomeButton>
-        <Title>데이터 시각화</Title>
+        <Header>
+          <Title>데이터 시각화</Title>
+          <AuthSection>
+            {isAuthenticated ? (
+              <>
+                <UserInfo>{user?.email}</UserInfo>
+                <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
+              </>
+            ) : (
+              <LoginButton onClick={() => router.push('/login')}>로그인</LoginButton>
+            )}
+          </AuthSection>
+        </Header>
         <ErrorText>{error}</ErrorText>
       </Container>
     );
@@ -128,7 +159,19 @@ export default function ChartsPage() {
       <HomeButton onClick={() => router.push('/')}>
         이전 페이지
       </HomeButton>
-      <Title>데이터 시각화</Title>
+      <Header>
+        <Title>데이터 시각화</Title>
+        <AuthSection>
+          {isAuthenticated ? (
+            <>
+              <UserInfo>{user?.email}</UserInfo>
+              <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
+            </>
+          ) : (
+            <LoginButton onClick={() => router.push('/login')}>로그인</LoginButton>
+          )}
+        </AuthSection>
+      </Header>
 
       {/* Top Coffee Brands */}
       <Section>
@@ -318,8 +361,8 @@ export default function ChartsPage() {
 }
 
 const Container = styled.div`
+  width: 100%;
   padding: 40px;
-  max-width: 1400px;
   margin: 0 auto;
 `;
 
@@ -342,11 +385,64 @@ const HomeButton = styled.button`
   }
 `;
 
+const Header = styled.header`
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 40px;
+`;
+
 const Title = styled.h1`
   font-size: 32px;
   font-weight: 700;
-  margin-bottom: 40px;
+  margin: 0;
   color: #333;
+`;
+
+const AuthSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+`;
+
+const UserInfo = styled.span`
+  color: #666;
+  font-size: 14px;
+`;
+
+const LoginButton = styled.button`
+  padding: 10px 20px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: #0056b3;
+  }
+`;
+
+const LogoutButton = styled.button`
+  padding: 10px 20px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: #5a6268;
+  }
 `;
 
 const Section = styled.section`

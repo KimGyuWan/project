@@ -257,7 +257,7 @@ const CheckboxLabel = styled.label`
 const TableWrapper = styled.div`
   overflow-x: auto;
   overflow-y: auto;
-  max-height: 700px;
+  max-height: 500px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   position: relative;
